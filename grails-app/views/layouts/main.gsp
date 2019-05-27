@@ -1,10 +1,10 @@
 
 <!DOCTYPE html>
-<!--[if lt IE 7 ]> <html lang="en" class="no-js ie6"> <![endif]-->
-<!--[if IE 7 ]>    <html lang="en" class="no-js ie7"> <![endif]-->
-<!--[if IE 8 ]>    <html lang="en" class="no-js ie8"> <![endif]-->
-<!--[if IE 9 ]>    <html lang="en" class="no-js ie9"> <![endif]-->
-<!--[if (gt IE 9)|!(IE)]><!--> <html lang="en" class="no-js"><!--<![endif]-->
+<!--[if lt IE 7 ]> <html lang="ko" class="no-js ie6"> <![endif]-->
+<!--[if IE 7 ]>    <html lang="ko" class="no-js ie7"> <![endif]-->
+<!--[if IE 8 ]>    <html lang="ko" class="no-js ie8"> <![endif]-->
+<!--[if IE 9 ]>    <html lang="ko" class="no-js ie9"> <![endif]-->
+<!--[if (gt IE 9)|!(IE)]><!--> <html lang="ko" class="no-js"><!--<![endif]-->
 	<head>
         <meta charset="utf-8">
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -14,10 +14,13 @@
 		<link rel="shortcut icon" href="${assetPath(src: 'favicon.ico')}" type="image/x-icon">
 		<link rel="apple-touch-icon" href="${assetPath(src: 'icon_57x57.png')}">
 		<link rel="apple-touch-icon" sizes="114x114" href="${assetPath(src: 'icon_114x114.png')}">
-        <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
-  		<asset:stylesheet src="application.css"/>
+        <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+        <meta property="og:image" content="${resource(dir: 'images', file: 'okky_logo_fb.png')}">
+        
+        <asset:stylesheet src="application.css"/>
+
         <!--[if lt IE 9]>
-            <asset:javascript src="html5.js" />
+            <asset:javascript src="libs/html5.js" />
         <![endif]-->
 
         <g:layoutHead/>
@@ -27,35 +30,25 @@
             <div class="main ${isIndex ? 'index' : ''}">
                 <g:layoutBody/>
                 <div class="right-banner-wrapper">
-                    <div class="google-ad">
 
-                        <script type="text/javascript"><!--
-                        google_ad_client = "ca-pub-8103607814406874";
-                        /* okjspad_160x600 */
-                        google_ad_slot = "6573675943";
-                        google_ad_width = 160;
-                        google_ad_height = 600;
-                        //-->
-                        </script>
-                        <script type="text/javascript"
-                                src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
-                        </script>
-                    </div>
                 </div>
                 <div id="footer" class="footer" role="contentinfo">
                     <g:include view="/layouts/_footer.gsp" />
                 </div>
             </div>
+
         </div>
         <script>
             var contextPath = "${request.contextPath}", encodedURL = "${encodedURL()}";
         </script>
         <asset:javascript src="application.js" />
+        <asset:javascript src="apps/search.js" />
         <sec:ifLoggedIn>
             <asset:javascript src="apps/notification.js" />
         </sec:ifLoggedIn>
         <g:pageProperty name="page.script"/>
         <asset:deferredScripts />
+
         <script>
             (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
                 (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
@@ -66,5 +59,21 @@
             ga('send', 'pageview');
 
         </script>
-	</body>
+
+
+        <div id="userPrivacy" class="modal" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                </div>
+            </div>
+        </div>
+
+        <div id="userAgreement" class="modal" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                </div>
+            </div>
+        </div>
+
+    </body>
 </html>

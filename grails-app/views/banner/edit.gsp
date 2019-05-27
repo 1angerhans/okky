@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<meta name="layout" content="main">
+		<meta name="layout" content="admin">
 		<g:set var="entityName" value="${message(code: 'banner.label', default: 'Banner')}" />
 		<title><g:message code="default.edit.label" args="[entityName]" /></title>
 	</head>
@@ -27,7 +27,7 @@
 				</g:eachError>
 			</ul>
 			</g:hasErrors>
-			<g:form url="[resource:banner, action:'update']" method="PUT" >
+			<g:form url="[resource:banner, action:'update']" method="PUT" enctype="multipart/form-data" id="bannerForm">
 				<g:hiddenField name="version" value="${banner?.version}" />
 				<fieldset class="form">
 					<g:render template="form"/>

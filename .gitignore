@@ -1,7 +1,6 @@
 *.class
 
 # Package Files #
-*.jar
 *.war
 *.ear
 
@@ -12,3 +11,12 @@
 *.log
 Config.groovy
 *.db
+
+.classpath
+.project
+.settings
+target-eclipse
+.slcache
+.asscache
+
+DataSource.groovy

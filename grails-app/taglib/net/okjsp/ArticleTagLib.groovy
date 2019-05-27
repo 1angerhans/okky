@@ -1,12 +1,14 @@
 package net.okjsp
 
 import grails.plugin.springsecurity.SpringSecurityService
+import grails.plugin.springsecurity.SpringSecurityUtils
 import org.ocpsoft.prettytime.PrettyTime
 import org.springframework.web.servlet.support.RequestContextUtils
 
 class ArticleTagLib {
 
     SpringSecurityService springSecurityService
+    ArticleService articleService
 
     /**
      * view Author
@@ -30,6 +32,9 @@ class ArticleTagLib {
             case "small":
                 s = '15'
                 break
+            case "list":
+                s = '30'
+                break
             case "medium":
                 s = '40'
                 break
@@ -42,6 +47,9 @@ class ArticleTagLib {
             case AvatarPictureType.FACEBOOK:
                 url = "//graph.facebook.com/${avatar.picture}/picture?width=${s}&height=${s}"
                 break
+            case AvatarPictureType.ATTACHED:
+                url = avatar.picture
+                break
             case AvatarPictureType.ANONYMOUSE:
                 url = "//www.gravatar.com/avatar/00000000000000000000000000000000?d=mm&s=${s}"
                 break
@@ -51,17 +59,44 @@ class ArticleTagLib {
         }
 
         out << "<div class='avatar avatar-${size} clearfix ${cssClass}'>"
-        out << "<a href='${request.contextPath}/user/info/${avatar.id}' class='avatar-photo'><img src='${url}'/></a> "
+
+        if(avatar.id)
+            out << "<a href='${request.contextPath}/user/info/${avatar.id}' class='avatar-photo'><img src='${url}'/></a> "
+        else
+            out << "<span class='avatar-photo'><img src='${url}'/></span> "
 
         if (attrs.pictureOnly != 'true') {
             out << """<div class="avatar-info">"""
-            out << """<a class="nickname" href="${request.contextPath}/user/info/${avatar.id}">${avatar.nickname}</a> """
+
+            if(avatar.id)
+                out << """<a class="nickname" href="${request.contextPath}/user/info/${avatar.id}"  title="${avatar.nickname}">${avatar.nickname}</a> """
+            else
+                out << """<span class="nickname" title="${avatar.nickname}">${avatar.nickname}</span> """
 
             if (attrs.dateCreated != null) {
-                out << """<div class="activity"><span class="fa fa-flash"></span> ${shortenNumber(avatar.activityPoint)}</div>"""
-                out << """<div class="date-created timeago" title="${attrs.dateCreated}">${attrs.dateCreated}</div>"""
+                if(avatar.id)
+                    out << """<div class="activity"><span class="fa fa-flash"></span> ${shortenNumber(avatar.activityPoint)}</div>"""
+                else
+                    out << """<div class="activity"><span class="fa fa-lock"></span> </div>"""
+
+
+                if(attrs.changeLog == null) {
+
+                    out << """<div class="date-created"><span class="timeago" title="${attrs.dateCreated}">${attrs.dateCreated.format('yyyy-MM-dd HH:mm:ss')}</span> """
+
+
+                } else {
+
+                    out << """<div class="date-created"><span class="timeago" title="${attrs.dateCreated}">${attrs.dateCreated.format('yyyy-MM-dd HH:mm:ss')}</span> 작성 """
+
+                    out << """  <span class="date-saperate">∙</span> <a href="${request.contextPath}/changes/${attrs.changeLog[2]}"><span class="timeago" title="${attrs.changeLog[1]}">${attrs.changeLog[1].format('yyyy-MM-dd HH:mm:ss')}</span> 수정됨 </a>"""
+
+                }
+
+                out << """</div> """
             } else {
-                out << """<div class="activity ${size == 'medium' ? 'block' : ''}"><span class="fa fa-flash"></span> ${shortenNumber(avatar.activityPoint)}</div>"""
+                if(avatar.id)
+                    out << """<div class="activity ${size == 'medium' ? 'block' : ''}"><span class="fa fa-flash"></span> ${shortenNumber(avatar.activityPoint)}</div>"""
             }
 
             out << "</div>"
@@ -70,6 +105,56 @@ class ArticleTagLib {
         out << "</div>"
     }
 
+    /**
+     * profile image url
+     * @attr size REQUIRED
+     * @attr avatar
+     */
+    def profileImage = { attrs, body ->
+        def url, s
+        def size = attrs.size
+
+        Avatar avatar = attrs.avatar ?: Avatar.get(springSecurityService.principal.avatarId)
+
+        switch (size) {
+            case "x-small":
+                s = '10'
+                break
+            case "small":
+                s = '15'
+                break
+            case "list":
+                s = '30'
+                break
+            case "medium":
+                s = '40'
+                break
+            case "big":
+                s = '150'
+                break
+            case "fb":
+                s = '200'
+                break
+        }
+
+        switch (avatar.pictureType) {
+            case AvatarPictureType.FACEBOOK:
+                url = "//graph.facebook.com/${avatar.picture}/picture?width=${s}&height=${s}"
+                break
+            case AvatarPictureType.ATTACHED:
+                url = avatar.picture
+                break
+            case AvatarPictureType.ANONYMOUSE:
+                url = "//www.gravatar.com/avatar/00000000000000000000000000000000?d=mm&s=${s}"
+                break
+            case AvatarPictureType.GRAVATAR:
+                url = "//www.gravatar.com/avatar/${avatar.picture}?d=identicon&s=${s}"
+                break
+        }
+
+        out << url
+    }
+    
     /**
      * Article Vote Buttons
      * @attr content REQUIRED content
@@ -84,6 +169,8 @@ class ArticleTagLib {
         def vote = attrs.votes.find { it.content.id == content.id}
 
         if(category.useEvaluate) {
+            
+            out << """<div class="note-evaluate-wrapper">"""
 
             def assentVotedClass = vote ? (vote?.point > 0 ? 'unvote' : 'disable') : 'assent'
             def dissentVotedClass = vote ? (vote?.point < 0 ? 'unvote' : 'disable') : 'dissent'
@@ -106,6 +193,8 @@ class ArticleTagLib {
                 out << """<i id="note-evaluate-dissent-${content.id}" class="fa fa-angle-down note-evaluate-dissent-disabled"></i></a>"""
 
             }
+            
+            out << """</div>"""
 
         } else {
 
@@ -123,6 +212,17 @@ class ArticleTagLib {
      */
     def isAuthor = { attrs, body ->
         if(springSecurityService.isLoggedIn() && attrs.author && springSecurityService.principal.avatarId == attrs.author.id) {
+            out << body()
+        }
+    }
+
+    /**
+     * Current user is Author
+     * @attr author Author REQUIRED
+     */
+    def isAuthorOrAdmin = { attrs, body ->
+        if((springSecurityService.isLoggedIn() && attrs.author && springSecurityService.principal.avatarId == attrs.author.id)
+            || SpringSecurityUtils.ifAllGranted("ROLE_ADMIN")) {
             out << body()
         }
     }
@@ -152,9 +252,18 @@ class ArticleTagLib {
      */
     def filterHtml = { attrs, body ->
         def text = attrs.text ?: body()
-        out << text.replaceAll("<script(.*?)>(.*?)</script>", '');
+        out << text;
     }
 
+    /**
+     * Strip HTML
+     */
+    def stripHtml = { attrs, body ->
+        def text = attrs.text ?: body()
+        def regex = /<\/?(?i:script|embed|object|frameset|frame|iframe|meta|link|style|a|img|br|p|span|div|hr)(.|\n)*?>/
+        text.replaceAll(regex, '')
+        out << text
+    }
     /**
      * Line to br
      * @attr text Original Text REQUIRED
@@ -169,15 +278,15 @@ class ArticleTagLib {
      *
      */
     def description = { attrs, body ->
-        def text = attrs.text ?: body()
+        String text = attrs.text ?: body()
         def length = attrs.length ?: 0
-        text = text.replaceAll("<(style|script)(.*?)>(.*?)</(.*?)>", '');
+        text = text.replaceAll("<(style|script)(.*?)>(.*?)</(.*?)>", ' ');
         text = text.replaceAll("&(.*?);", ' ');
-        text = text.replaceAll("<(.*?)>", '');
+        text = text.replaceAll("<(.*?)>", ' ');
         text = text.replaceAll("\n", ' ');
 
         if(length > 0 && length < text.size()) {
-            text =text.substring(0, length)
+            text = text.substring(0, length)
         }
 
         out << text
@@ -195,9 +304,14 @@ class ArticleTagLib {
 
         if(tags instanceof String)
             tags = tags.split(',')
-
-        tags?.each {
-            out << """<span class="list-group-item-text item-tag label ${classNames}">${it}</span> """
+        
+        def limit = attrs.limit ?: tags?.length ?: 0
+        
+        limit = limit > tags?.length ? tags?.length : limit
+        
+        for(int i = 0; i < limit; i++) {
+            def tag = tags[i]
+            out << """<a href="${request.contextPath}/articles/tagged/${tag}" class="list-group-item-text item-tag label ${classNames}">${tag}</a> """
         }
     }
 
@@ -214,12 +328,14 @@ class ArticleTagLib {
     private def shortenNumber(def orgNumber) {
 
         def unit = ['','k','m','b','t']
-        int count = 0;
-        int number = orgNumber
+        int count = 0
+        int number = orgNumber > 0 ? orgNumber : orgNumber*-1
         while (number >= 1000) {
-            number /= 1000;
-            count++;
+            number /= 1000
+            count++
         }
+        
+        if(orgNumber < 0) number *= -1
 
         "${number}${unit[count]}"
     }

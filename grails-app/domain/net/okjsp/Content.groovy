@@ -1,10 +1,10 @@
 package net.okjsp
 
 import grails.transaction.Transactional
-import sun.security.x509.AVA
 
 class Content {
-    transient springSecurityService
+    transient sanitizeService
+    transient articleService
 
     ContentType type = ContentType.ARTICLE
     ContentTextType textType = ContentTextType.MD
@@ -18,11 +18,14 @@ class Content {
 
     boolean anonymity = false
     String aNickName
+    String createIp = null
+
+    boolean enabled = true
 
     Date dateCreated
     Date lastUpdated
 
-    static hasMany = [files: File, contetnVotes : ContentVote]
+    static hasMany = [files: AttachedFile, contetnVotes: ContentVote]
 
     static belongsTo = [article: Article]
 
@@ -36,12 +39,21 @@ class Content {
 
     static constraints = {
         text blank: false
-        author bindable: false
+        author bindable: false, nullable: true
         lastEditor nullable: true, bindable: false
         voteCount bindable: false
         type bindable: false
         article nullable: true
         aNickName nullable: true
+        createIp nullable: true
+        enabled nullable: true
+        text validator: { val ->
+            def spam = SpamWord.findAll().find { word ->
+                val.contains(word.text)
+            }
+
+            if(spam) return ["default.invalid.word.message"]
+        }
     }
 
     def getDisplayAuthor() {
@@ -59,7 +71,32 @@ class Content {
 
     def getAttachedFiles() {
         this.files.findAll {
-            it.attachType == FileAttachType.ATTACHED
+            it.attachType == AttachedFileType.ATTACHED
+        }
+    }
+
+    def beforeInsert() {
+        if(text) {
+            text = sanitizeService.sanitize(text)
+        }
+
+        if(anonymity) {
+            anonymity = true
+            author = null
+        }
+    }
+
+    def beforeUpdate() {
+        if(isDirty("text")) {
+            text = sanitizeService.sanitize(text)
+
+            articleService.changeLog(ChangeLogType.CONTENT, article, this,  this.getPersistentValue('text'), text)
+        }
+
+        if(anonymity) {
+            anonymity = true
+            lastEditor = null
+            author = null
         }
     }
 

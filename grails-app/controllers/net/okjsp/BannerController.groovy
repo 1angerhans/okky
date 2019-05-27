@@ -1,6 +1,7 @@
 package net.okjsp
 
-import grails.plugin.springsecurity.annotation.Secured
+import org.hibernate.type.StandardBasicTypes
+import org.springframework.web.multipart.MultipartFile
 
 import static org.springframework.http.HttpStatus.*
 import grails.transaction.Transactional
@@ -8,11 +9,35 @@ import grails.transaction.Transactional
 @Transactional(readOnly = true)
 class BannerController {
 
-    static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
+    UserService userService
+    BannerService bannerService
+
+    static allowedMethods = [save: "POST", update: ["PUT","POST"], delete: "DELETE"]
+
+    @Transactional
+    def stats(Banner banner) {
+
+        if (banner == null) {
+            notFound()
+            return
+        }
+
+        String ip = userService.getRealIp(request)
+
+        def bannerClick = BannerClick.findOrCreateWhere(banner: banner, ip: ip)
+
+        bannerClick.clickCount++
+        bannerClick.dateString = new Date().format("yyyy-MM-dd")
+        bannerClick.save(flush: true)
+
+        redirect url: banner.url
+    }
 
     def index(Integer max) {
         params.max = Math.min(max ?: 10, 100)
-        respond Banner.list(params), model: [bannerCount: Banner.count()]
+        params.order = params.order ?: 'desc'
+        params.sort = params.sort ?: 'id'
+        respond Banner.list(params), model:[bannerCount: Banner.count()]
     }
 
     def show(Banner banner) {
@@ -31,11 +56,22 @@ class BannerController {
         }
 
         if (banner.hasErrors()) {
-            respond banner.errors, view: 'create'
+            respond banner.errors, view:'create'
             return
         }
 
-        banner.save flush: true
+
+        MultipartFile imageFile = request.getFile("imageFile")
+
+        if(imageFile && !imageFile.empty) {
+            def ext = imageFile.originalFilename.substring(imageFile.originalFilename.lastIndexOf('.'));
+            def mil = System.currentTimeMillis()
+            imageFile.transferTo(new java.io.File("${grailsApplication.config.grails.filePath}/banner/", "${mil}${ext}"))
+
+            banner.image = "${grailsApplication.config.grails.fileURL}/banner/${mil}${ext}"
+        }
+
+        bannerService.save(banner)
 
         request.withFormat {
             form multipartForm {
@@ -58,18 +94,28 @@ class BannerController {
         }
 
         if (banner.hasErrors()) {
-            respond banner.errors, view: 'edit'
+            respond banner.errors, view:'edit'
             return
         }
 
-        banner.save flush: true
+        MultipartFile imageFile = request.getFile("imageFile")
+
+        if(imageFile && !imageFile.empty) {
+            def ext = imageFile.originalFilename.substring(imageFile.originalFilename.lastIndexOf('.'));
+            def mil = System.currentTimeMillis()
+            imageFile.transferTo(new java.io.File("${grailsApplication.config.grails.filePath}/banner/", "${mil}${ext}"))
+
+            banner.image = "${grailsApplication.config.grails.fileURL}/banner/${mil}${ext}"
+        }
+
+        bannerService.save(banner)
 
         request.withFormat {
             form multipartForm {
                 flash.message = message(code: 'default.updated.message', args: [message(code: 'Banner.label', default: 'Banner'), banner.id])
                 redirect banner
             }
-            '*' { respond banner, [status: OK] }
+            '*'{ respond banner, [status: OK] }
         }
     }
 
@@ -81,15 +127,39 @@ class BannerController {
             return
         }
 
-        banner.delete flush: true
+        bannerService.delete(banner)
 
         request.withFormat {
             form multipartForm {
                 flash.message = message(code: 'default.deleted.message', args: [message(code: 'Banner.label', default: 'Banner'), banner.id])
-                redirect action: "index", method: "GET"
+                redirect action:"index", method:"GET"
             }
-            '*' { render status: NO_CONTENT }
+            '*'{ render status: NO_CONTENT }
         }
+    }
+
+    def export(Banner banner) {
+
+        def results = BannerClick.createCriteria().list {
+            projections {
+                groupProperty('dateString')
+                count('clickCount')
+                sum('clickCount')
+            }
+            eq('banner', banner)
+            order('dateString', 'desc')
+        }
+
+        String text = "일자,클릭회원수,전체클릭수\n"
+
+        results.each { e ->
+            text += e.join(',') +'\n'
+        }
+
+        response.contentType = "text/csv"
+        response.setHeader("Content-disposition", String.format("attachment; filename=banner_%s_%s.csv", banner.name, new Date().format("yyyy-MM-dd")))
+
+        render (text: text, encoding: "EUC-KR")
     }
 
     protected void notFound() {
@@ -98,7 +168,7 @@ class BannerController {
                 flash.message = message(code: 'default.not.found.message', args: [message(code: 'banner.label', default: 'Banner'), params.id])
                 redirect action: "index", method: "GET"
             }
-            '*' { render status: NOT_FOUND }
+            '*'{ render status: NOT_FOUND }
         }
     }
 }

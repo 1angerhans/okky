@@ -12,6 +12,8 @@ class NotificationJob {
     NotificationService notificationService
     static Date lastSend = new Date()
 
+    def concurrent = false
+
     static triggers = {
         simple name: 'notificationTrigger', repeatInterval: 60000
     }
@@ -20,25 +22,19 @@ class NotificationJob {
 
         Date now = new Date()
 
-        println "NotificationJob excuted by : ${lastSend} / now : ${now}"
-
         def notes = Content.findAll {
             and {
                 eq('type', ContentType.NOTE)
-                ge('dateCreated', lastSend)
+                gt('dateCreated', lastSend)
             }
         }
 
         def votes = ContentVote.findAll {
             and {
                 gt('point', 0)
-                ge('dateCreated', lastSend)
+                gt('dateCreated', lastSend)
             }
         }
-
-
-        println "NotificationJob Notes Count ${notes.size()}"
-        println "NotificationJob Votes Count ${votes.size()}"
 
         notes.each { note ->
             notificationService.createFromNote(note)
@@ -48,7 +44,7 @@ class NotificationJob {
             notificationService.createFromAccent(vote)
         }
 
-        println "NotificationJob excution time ${new Date().time-now.time}ms"
+//        println "NotificationJob excution time ${new Date().time-now.time}ms"
 
         lastSend = now
     }

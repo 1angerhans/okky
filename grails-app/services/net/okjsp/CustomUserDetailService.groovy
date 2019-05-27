@@ -3,6 +3,7 @@ package net.okjsp
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.userdetails.GrailsUserDetailsService
 import grails.transaction.Transactional
+import net.okjsp.exception.AutoPasswordRequired
 import org.codehaus.groovy.grails.web.util.WebUtils
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
@@ -20,10 +21,16 @@ class CustomUserDetailService implements GrailsUserDetailsService {
     }
 
     @Transactional
-    UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-            User user = User.findByUsername(username)
-            if (!user) throw new UsernameNotFoundException(
-                'User not found', username)
+    UserDetails loadUserByUsername(String un) throws UsernameNotFoundException {
+            User user = User.where {
+                username == un
+                accountExpired == false
+                accountLocked == false
+                withdraw == false
+            }.get()
+
+            if (!user || user.withdraw) throw new UsernameNotFoundException(
+                'User not found', un)
 
             def authorities = user.authorities.collect {
                 new SimpleGrantedAuthority(it.authority)

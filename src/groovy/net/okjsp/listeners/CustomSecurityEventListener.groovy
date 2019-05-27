@@ -5,11 +5,14 @@ import grails.plugin.springsecurity.SpringSecurityUtils
 import net.okjsp.CustomUserDetail
 import net.okjsp.LoggedIn
 import net.okjsp.User
+import net.okjsp.UserService
 import org.codehaus.groovy.grails.commons.GrailsApplication
 import org.codehaus.groovy.grails.web.util.WebUtils
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationListener
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent
+
+import javax.transaction.Transactional
 
 /**
  * Created by langerhans on 2014. 8. 21..
@@ -22,15 +25,22 @@ class CustomSecurityEventListener implements ApplicationListener<AuthenticationS
     @Autowired
     GrailsApplication grailsApplication
 
+    @Autowired
+    UserService userService
+
+    @Transactional
     void onApplicationEvent(AuthenticationSuccessEvent event) {
 
         CustomUserDetail userDetail = event.authentication.principal
 
-        User userInstance = User.get(userDetail.id)
+        User userInstance = User.load(userDetail.id)
+
+        def remoteAddress =  userService.getRealIp(WebUtils.retrieveGrailsWebRequest().request)
 
         // Login Log 저장
-        new LoggedIn(user: userInstance, remoteAddr: event.authentication.details.remoteAddress).save(flush: true)
+        new LoggedIn(user: userInstance, remoteAddr: remoteAddress).save(flush: true)
 
+        /*
         def rememberMeConfig = SpringSecurityUtils.securityConfig.rememberMe
         def params = WebUtils.retrieveGrailsWebRequest().params
 
@@ -53,6 +63,6 @@ class CustomSecurityEventListener implements ApplicationListener<AuthenticationS
 
                 cookieService.setCookie(cookieName, rememberMe, expirationTime)
             }
-        }
+        }*/
     }
 }

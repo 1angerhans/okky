@@ -10,14 +10,14 @@
 
     <div id="create-user" class="content" role="main">
         <h3 class="content-header">회원가입</h3>
-        <div class="col-md-6">
-            <div class="panel panel-default panel-margin-10">
+        <div class="col-md-6 main-block-left">
+            <div class="panel panel-default">
                 <div class="panel-heading">
                     <h5 class="panel-header">이메일로 가입하기</h5>
                 </div>
                 <g:form url="[resource:user, action:'save']" class="form-signup form-user panel-body" method='POST' id='loginForm' autocomplete='off'>
-                    <g:hasErrors>
-                        <div  class="alert alert-danger alert-dismissible" role="alert">
+                    <g:hasErrors model="[user:user, userAvatar:user.avatar, userPerson:user.person]">
+                        <div  class="alert alert-danger" role="alert">
                             <ul>
                                 <g:eachError bean="${user}" var="error">
                                     <li <g:if test="${error in org.springframework.validation.FieldError}">data-field-id="${error.field}"</g:if>><g:message error="${error}"/></li>
@@ -69,12 +69,12 @@
                     <button class="btn btn-primary btn-block" type="submit"><g:message code="user.button.join.label" default="회원가입"/></button>
 
                     <div class="signup-block">
-                        <a href="#">회원가입약관</a> <span class="inline-saperator">/</span> <a href="#">개인정보취급방침</a>
+                        <g:link uri="/user/agreement" data-toggle="modal"  data-target="#userAgreement">회원가입약관</g:link> <span class="inline-saperator">/</span> <g:link uri="/user/privacy"  data-toggle="modal" data-target="#userPrivacy">개인정보취급방침</g:link>
                     </div>
                 </g:form>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6 main-block-right">
             <div class="panel panel-default">
                 <div class="panel-heading">
                     <h5 class="panel-header">SNS로 가입하기</h5>
@@ -88,5 +88,6 @@
         </div>
 
     </div>
-	</body>
+
+</body>
 </html>

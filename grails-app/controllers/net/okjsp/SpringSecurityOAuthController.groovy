@@ -9,6 +9,7 @@ import grails.plugin.springsecurity.oauth.OAuthLoginException
 import grails.plugin.springsecurity.oauth.OAuthToken
 import grails.plugin.springsecurity.userdetails.GrailsUser
 import grails.validation.ValidationException
+import org.codehaus.groovy.grails.web.util.WebUtils
 import org.grails.plugin.springsecurity.oauth.GoogleApi20Token
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.security.core.context.SecurityContextHolder
@@ -155,7 +156,7 @@ class SpringSecurityOAuthController {
             def User = customSecurityOAuthService.lookupUserClass()
             boolean linked = User.withTransaction { status ->
                 //def user = User.findByUsernameAndPassword(command.username, springSecurityService.encodePassword(command.password))
-                def user = User.findByUsername(command.username)
+                def user = User.findByUsernameAndEnabled(command.username, true)
                 if (user) {
                     user.addToOAuthIDs(provider: oAuthToken.providerName, accessToken: oAuthToken.socialId, user: user)
                     if (user.validate() && user.save()) {
@@ -203,9 +204,11 @@ class SpringSecurityOAuthController {
 
                 try {
 
-                    def reCaptchaVerified = recaptchaService.verifyAnswer(session, request.getRemoteAddr(), params)
+                    def realIp = userService.getRealIp(request)
 
-                    user.createIp = request.remoteAddr
+                    def reCaptchaVerified = recaptchaService.verifyAnswer(session, realIp, params)
+
+                    user.createIp = realIp
 
                     if(user.hasErrors() || !reCaptchaVerified) {
                         respond user.errors, view: 'askToLinkOrCreateAccount', model: [userInstance: user]
@@ -213,7 +216,7 @@ class SpringSecurityOAuthController {
                     }
 
                     user.addToOAuthIDs(provider: oAuthToken.providerName, accessToken: oAuthToken.socialId, user: user)
-
+                    user.enabled = true
                     if(oAuthToken.providerName == FacebookOAuthToken.PROVIDER_NAME)
                         user.avatar.pictureType = AvatarPictureType.FACEBOOK
 
@@ -239,7 +242,7 @@ class SpringSecurityOAuthController {
         def savedRequest = SpringSecurityUtils.getSavedRequest(session)
         def defaultUrlOnNull = '/'
         if (savedRequest && !config.successHandler.alwaysUseDefault) {
-            return [url: (savedRequest.redirectUrl ?: defaultUrlOnNull)]
+            return [url: (savedRequest.redirectUrl && !savedRequest.redirectUrl.endsWith('.json') ? savedRequest.redirectUrl : defaultUrlOnNull)]
         }
         return [uri: (config.successHandler.defaultTargetUrl ?: defaultUrlOnNull)]
     }
@@ -247,6 +250,18 @@ class SpringSecurityOAuthController {
     protected void authenticateAndRedirect(OAuthToken oAuthToken, redirectUrl) {
         session.removeAttribute SPRING_SECURITY_OAUTH_TOKEN
         SecurityContextHolder.context.authentication = oAuthToken
+
+        def remoteAddress =  userService.getRealIp(WebUtils.retrieveGrailsWebRequest().request)
+
+        if (oAuthToken.principal instanceof GrailsUser) {
+            GrailsUser grailsUser = oAuthToken.principal
+
+            User user = User.findByUsername(grailsUser.getUsername())
+
+            // Login Log 저장
+            new LoggedIn(user: user, remoteAddr: remoteAddress).save(flush: true)
+        }
+
         redirect(redirectUrl instanceof Map ? redirectUrl : [uri: redirectUrl])
     }
 

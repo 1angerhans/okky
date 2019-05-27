@@ -1,44 +1,60 @@
-<%@ page import="net.okjsp.Article" %>
+<%@ page contentType="text/html;charset=utf-8" %>
+<%@ page import="net.okjsp.AvatarPictureType; net.okjsp.Article" %>
 <%@ page import="net.okjsp.Content" %>
 <%@ page import="net.okjsp.ContentTextType" %>
+
 <!DOCTYPE html>
 <html>
 	<head>
-		<meta name="layout" content="main">
+		<meta name="layout" content="main_with_banner">
 		<g:set var="entityName" value="${message(code: 'article.label', default: 'Article')}" />
         <title>${article.title}</title>
         <meta property="og:type"		content="article">
         <meta property="og:site_name" content="OKKY">
         <meta property="og:url" content="${grailsApplication.config.grails.serverURL}/article/${article.id}">
         <meta property="og:image" content="${resource(dir: 'images', file: 'okky_logo_fb.png')}">
-        <meta property="og:description" content="${description(text:article.content?.text, size: 50)}">
+        %{--<meta property="og:image" content="${profileImage(size: 'fb', avatar: article.displayAuthor)}">--}%
+        <meta property="og:description" content="${description(text:article.content?.text, length: 200)}">
         <meta property="og:title" content="OKKY | ${article.title}">
+        <meta property="dable:item_id" content="${article.id}">
+        <meta property="dable:author" content="${article.displayAuthor}">
+        <meta property="article:section" content="${article.category.code}">
+        <meta property="article:published_time" content="${article.dateCreated.format("yyyy-MM-dd'T'HH:mm:ss'Z'")}">
     </head>
 	<body>
 
-    <g:sidebar category="${article.category}"/>
+        <g:sidebar category="${article.category}"/>
+
         <div id="article" class="content" role="main">
             <div class="nav" role="navigation">
                 <g:link class="create btn btn-success btn-wide pull-right" uri="/articles/${article.category.code}/create"><i class="fa fa-pencil"></i> <g:message code="default.new.label" args="[entityName]" /></g:link>
+
+                <h4><g:message code="${article.category.labelCode}" default="${article.category.defaultLabel}" /></h4>
             </div>
 
-            <div class="panel panel-default clearfix">
+            <div class="panel panel-default clearfix fa-">
                 <div class="panel-heading clearfix">
-                    <g:avatar avatar="${article.displayAuthor}" size="medium" dateCreated="${article.dateCreated}" class="pull-left" />
+                    <g:avatar avatar="${article.displayAuthor}" size="medium" dateCreated="${article.dateCreated}" changeLog="${changeLogs?.find { it[2] == article.content.id}}" logType="article" class="pull-left" />
                     <div class="content-identity pull-right">
-                        <div><i class="fa fa-eye"></i> <g:shorten number="${article.viewCount}" /></div>
+                    <div class="content-identity-count"><i class="fa fa-comment"></i> <g:formatNumber number="${article.noteCount}" /></div>
+                        <div class="content-identity-count"><i class="fa fa-eye"></i> <g:formatNumber number="${article.viewCount}" /></div>
                     </div>
                 </div>
                 <div class="content-container clearfix">
-                    <div class="panel-body content-body pull-left">
+                    <div id="content-body" class="panel-body content-body pull-left">
                         <div class="content-tags">
                             <span class="list-group-item-text article-id">#${article.id}</span>
                             <g:categoryLabel category="${article.category}" />
                             <g:tags tags="${article.tagString}" />
                         </div>
-                        <h2 class="panel-title">${article.title}</h2>
+                        <h2 class="panel-title">
+                            <g:if test="${!article.enabled}">
+                                <span class="fa fa-ban" style="color:red;"></span>
+                            </g:if>
+                            ${article.title}
+                        </h2>
                         <hr/>
-                        <article class="content-text">
+                        <article class="content-text" itemprop="articleBody">
                         <g:if test="${article.content}">
                             <g:if test="${article.content?.textType == ContentTextType.MD}">
                                 <markdown:renderHtml text="${article.content.text}"/>
@@ -54,16 +70,16 @@
 
                     </div>
 
-                    <div class="content-function pull-right text-center">
+                    <div id="content-function" class="content-function pull-right text-center">
                         <div class="content-function-group">
                             <g:voteButtons content="${article.content}" votes="${contentVotes}" category="${article.category}" />
                         </div>
-                        <div class="content-function-group">
+                        <div class="content-function-group article-scrap-wrapper">
                             <a href="javascript://" id="article-scrap-btn" data-type="${scrapped ? 'unscrap' : 'scrap'}"><i class="fa fa-bookmark ${scrapped ? 'note-scrapped' : ''}" data-toggle="tooltip" data-placement="left" title="${scrapped ? '스크랩 취소' : '스크랩'}"></i></a>
                             <div id="article-scrap-count" class="content-count"><g:shorten number="${article.scrapCount}" /></div>
                         </div>
                     </div>
-                    <div class="content-function-cog">
+                    <div class="content-function-cog share-btn-wrapper">
                         <div class="dropdown">
                             <a href="http://www.facebook.com/sharer/sharer.php?app_id=${grailsApplication.config.oauth.providers.facebook.key}&sdk=joey&u=${encodedURL(withDomain: true)}&display=popup&ref=plugin" class="btn-facebook-share"><i class="fa fa-facebook-square fa-fw" data-toggle="tooltip" data-placement="left" title="페이스북 공유"></i></a>
                             %{--<a href="javascript://" data-toggle="dropdown" id="sns-share-btn"><i class="fa fa-share-alt" data-toggle="tooltip" data-placement="left" title="SNS 공유"></i></a>
@@ -73,36 +89,34 @@
                             </ul>--}%
                         </div>
 
-                        <g:isAuthor author="${article.author}">
+                        <g:isAuthorOrAdmin author="${article.author}">
                         <div class="dropdown">
                             <g:form url="[resource:article, action:'delete']" name="article-delete-form" method="DELETE">
                                 <div class="dropdown">
                                     <a href="javascript://" data-toggle="dropdown"><i class="fa fa-cog" data-toggle="tooltip" data-placement="left" title="게시물 설정"></i></a>
                                     <ul class="dropdown-menu" role="menu">
-                                        <li><g:link class="edit" action="edit" resource="${article}"><i class="fa fa-edit fa-fw"></i> <g:message code="default.button.edit.label" default="Edit" /></g:link></li>
+                                        <li><g:link class="edit" action="edit" resource="${article}"><i class="fa fa-edit fa-fw"></i> <g:message code="default.button.edit.label" default="Edit" /> <sec:ifAllGranted roles="ROLE_ADMIN"><span style="color:red;">(관리자권한)</span></sec:ifAllGranted></g:link></li>
                                         <g:if test="${notes.size() > 0}">
-                                            <li><a href="javascript://" onclick="alert('댓글이 있는 글은 삭제하실 수 없습니다.');"><i class="fa fa-trash-o fa-fw"></i> ${message(code: 'default.button.delete.label', default: 'Delete')}</a></li>
+                                            <li><a href="javascript://" onclick="alert('댓글이 있는 글은 삭제하실 수 없습니다.');"><i class="fa fa-trash-o fa-fw"></i> ${message(code: 'default.button.delete.label', default: 'Delete')} <sec:ifAllGranted roles="ROLE_ADMIN"><span style="color:red;">(관리자권한)</span></sec:ifAllGranted></a></li>
                                         </g:if>
                                         <g:else>
-                                            <li><a href="javascript://" id="article-delete-btn"><i class="fa fa-trash-o fa-fw"></i> ${message(code: 'default.button.delete.label', default: 'Delete')}</a></li>
+                                            <li><a href="javascript://" id="article-delete-btn"><i class="fa fa-trash-o fa-fw"></i> ${message(code: 'default.button.delete.label', default: 'Delete')} <sec:ifAllGranted roles="ROLE_ADMIN"><span style="color:red;">(관리자권한)</span></sec:ifAllGranted></a></li>
                                         </g:else>
                                     </ul>
                                 </div>
                             </g:form>
                         </div>
-                        </g:isAuthor>
+                        </g:isAuthorOrAdmin>
                     </div>
                 </div>
             </div>
 
-            <div class="sub-banner-wrapper">
-                <div class="sub-banner"><a href="http://www.devlec.com/?_pageVariable=OKJSP" target="_blank"><img src="http://www.devlec.com/images/devlec_okjsp.gif"/></a></div>
-            </div>
+            <g:banner type="CONTENT" />
 
             <div class="panel panel-default clearfix">
                 <!-- List group -->
                 <ul class="list-group">
-                <g:set var="noteTitle" value="${article.category.useEvaluate ? '답변':'댓글'}" />
+                <g:set var="noteTitle" value="${article.category.useSelectSolution ? '답변':'댓글'}" />
                     <li id="note-title" class="list-group-item note-title">
                         <h3 class="panel-title">${noteTitle} <span id="note-count">${article.noteCount}</span></h3>
                     </li>
@@ -110,7 +124,7 @@
                         <li class="list-group-item note-item clearfix" id="note-${note.id}">
                             <g:form url="[resource:note, action:'update']" method="PUT" data-id="${note.id}" class="note-update-form">
                                 <div class="content-body panel-body pull-left">
-                                    <g:if test="${article.category.useEvaluate}">
+                                    <g:if test="${article.category.useSelectSolution}">
                                         <g:isAuthor author="${article.author}">
                                             <g:if test="${article.selectedNote?.id == note.id}">
                                                 <a href="javascript://" class="note-vote-btn note-select-btn note-selected" data-id="${note.id}" data-type="deselect">
@@ -145,7 +159,7 @@
                                         </g:isNotAuthor>
                                     </g:if>
 
-                                    <g:avatar avatar="${note.displayAuthor}" size="medium" dateCreated="${note.dateCreated}"/>
+                                    <g:avatar avatar="${note.displayAuthor}" size="medium" dateCreated="${note.dateCreated}" changeLog="${changeLogs?.find { it[2] == note.id}}" logType="content"/>
                                     <fieldset class="form">
                                         <article id="note-text-${note.id}" class="list-group-item-text note-text">
                                             <g:if test="${note.textType == ContentTextType.MD}">
@@ -167,13 +181,13 @@
                                     </div>
                                 </div>
 
-                                <g:isAuthor author="${note.author}">
+                                <g:isAuthorOrAdmin author="${note.author}">
                                 <div id="content-function-cog-${note.id}" class="content-function-cog">
                                     <div class="dropdown">
                                         <a href="javascript://" data-toggle="dropdown"><i class="fa fa-cog" data-toggle="tooltip" data-placement="left" title="게시물 설정"></i></a>
                                         <ul class="dropdown-menu" role="menu">
-                                            <li><a href="javascript://" class="note-edit-btn" data-id="${note.id}"><i class="fa fa-edit fa-fw"></i> <g:message code="default.button.edit.label" default="Edit" /></a></li>
-                                            <li><a href="javascript://" class="note-delete-btn" data-id="${note.id}"><i class="fa fa-trash-o fa-fw"></i> ${message(code: 'default.button.delete.label', default: 'Delete')}</a></li>
+                                            <li><a href="javascript://" class="note-edit-btn" data-id="${note.id}"><i class="fa fa-edit fa-fw"></i> <g:message code="default.button.edit.label" default="Edit" /></a><sec:ifAllGranted roles="ROLE_ADMIN"><span style="color:red;">(관리자권한)</span></sec:ifAllGranted></li>
+                                            <li><a href="javascript://" class="note-delete-btn" data-id="${note.id}"><i class="fa fa-trash-o fa-fw"></i> ${message(code: 'default.button.delete.label', default: 'Delete')}</a><sec:ifAllGranted roles="ROLE_ADMIN"><span style="color:red;">(관리자권한)</span></sec:ifAllGranted></li>
                                         </ul>
                                     </div>
                                     <div class="buttons" style="display: none;">
@@ -181,7 +195,7 @@
                                         <p><g:submitButton name="create" class="btn btn-success btn-wide" value="${message(code: 'note.button.edit.label', default: '저장')}" /></p>
                                     </div>
                                 </div>
-                                </g:isAuthor>
+                                </g:isAuthorOrAdmin>
                             </g:form>
 
                             <g:form url="[resource:note, action:'delete']" id="note-delete-form-${note.id}" method="DELETE">
@@ -196,19 +210,24 @@
                                 </g:if>
                                 <div class="content-body panel-body pull-left">
                                     <div style="margin-left: 5px;">
-                                        <g:if test="${article.category.useEvaluate}">
+                                        <g:if test="${article.category.useSelectSolution}">
                                             <div class="note-select-indicator note-deselected">
                                                 <i class="fa fa-edit"></i>
                                             </div>
                                         </g:if>
-                                        <g:avatar size="medium"/>
+                                        <g:if test="${article.category.anonymity}">
+                                            <g:avatar size="medium" avatar="[nickname: '익명', pictureType:net.okjsp.AvatarPictureType.ANONYMOUSE]"/>
+                                        </g:if>
+                                        <g:else>
+                                            <g:avatar size="medium"/>
+                                        </g:else>
                                     </div>
                                     <fieldset class="form">
                                         <g:hiddenField name="note.textType" value="HTML"/>
                                         <g:textArea name="note.text" id="note-create" placeholder="댓글 쓰기" class="form-control" />
                                     </fieldset>
                                 </div>
-                                <div class="content-function-cog">
+                                <div class="content-function-cog note-submit-buttons clearfix">
                                     <p><a href="javascript://" id="note-create-cancel-btn" class="btn btn-default btn-wide" style="display: none;">취소</a></p>
                                     <g:submitButton name="create" id="btn-create-btn" class="btn btn-success btn-wide" disabled="disabled" value="${message(code: 'note.button.create.label', default: ' 등록')}" />
                                 </div>

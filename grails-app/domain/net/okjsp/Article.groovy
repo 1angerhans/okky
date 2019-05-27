@@ -2,7 +2,11 @@ package net.okjsp
 
 import grails.transaction.Transactional
 
+import java.text.Normalizer
+
 class Article {
+
+    transient articleService
 
     String title
     String tagString
@@ -24,40 +28,65 @@ class Article {
 
     Content selectedNote
 
+    String createIp = ""
+
     Date dateCreated
     Date lastUpdated
 
+    Integer best = 0
+
+    boolean disabled
+    boolean ignore
+
+    boolean isRecruit = false
+    boolean ignoreBest = false
+
+    Recruit recruit
+
     static belongsTo = [content: Content]
 
-    static hasMany = [tags : Tag, notes: Content]
+    static hasMany = [tags : Tag, notes: Content, articleNotices: ArticleNotice]
+
+    static transients = ['disabled', 'recruit', 'ignore']
 
     static mapping = {
+        author fetch: 'join'
         notes sort: 'id', order: 'asc'
         sort id: 'desc'
+        best formula: "view_count + vote_count * 500 + note_count * 50"
     }
 
     static constraints = {
         title blank: false
-        author bindable: false
+        author nullable: true, bindable: false
         lastEditor nullable: true, bindable: false
         aNickName nullable: true
         viewCount bindable: false
         voteCount bindable: false
         noteCount bindable: false
         scrapCount bindable: false
-        tags nullable: true, maxSize: 5
+        tags maxSize: 10, nullable: true
         tagString nullable: true
         notes bindable: false
         enabled bindable: false
         selectedNote nullable: true, bindable: false
         content nullable: true
         choice bindable: false, nullable: true
+        createIp bindable: false, nullable: true
+        ignoreBest bindable: false, nullable: true
+        title validator: { val ->
+            def spam = SpamWord.findAll().find { word ->
+                val.contains(word.text)
+            }
+
+            if(spam) return ["default.invalid.word.message"]
+        }
     }
 
     def getDisplayAuthor() {
         if(anonymity) {
             return new Avatar(
-                nickname: aNickName,
+                nickname: aNickName ?: "익명",
                 picture: '',
                 pictureType: AvatarPictureType.ANONYMOUSE,
                 activityPoint: null
@@ -68,12 +97,28 @@ class Article {
     }
 
     def beforeInsert() {
+        if(anonymity) {
+            author = null
+            content.anonymity = true
+            content.author = null
+            content.aNickName = aNickName
+        }
         updateTag()
     }
 
     def beforeUpdate() {
+        if(anonymity) {
+            author = null
+            lastEditor = null
+            content.anonymity = true
+            content.aNickName = aNickName
+        }
         if(isDirty('tagString')) {
             updateTag()
+            articleService.changeLog(ChangeLogType.TAGS, this, content, this.getPersistentValue('tagString'), tagString)
+        }
+        if(isDirty('title')) {
+            articleService.changeLog(ChangeLogType.TITLE, this, content, this.getPersistentValue('title'), title)
         }
     }
 
@@ -88,7 +133,7 @@ class Article {
 
     void updateTag() {
 
-        List<Tag> removedTags = tags ?: []
+        def removedTags = tags ?: []
 
         if(tagString) {
             def tagNames = tagString.split(/[,\s]+/).toList().unique().findAll { !it.isEmpty() }
@@ -112,7 +157,7 @@ class Article {
             tagString = tagNames.join(',')
         }
 
-        removedTags.each {tag ->
+        removedTags.each { tag ->
             removeFromTags(tag)
             tag.taggedCount--
             tag.save()

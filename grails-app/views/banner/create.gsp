@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<meta name="layout" content="main">
+		<meta name="layout" content="admin">
 		<g:set var="entityName" value="${message(code: 'banner.label', default: 'Banner')}" />
 		<title><g:message code="default.create.label" args="[entityName]" /></title>
 	</head>
@@ -25,7 +25,7 @@
 				</g:eachError>
 			</ul>
 			</g:hasErrors>
-			<g:form url="[resource:banner, action:'save']" >
+			<g:form url="[resource:banner, action:'save']" enctype="multipart/form-data" id="bannerForm">
 				<fieldset class="form">
 					<g:render template="form"/>
 				</fieldset>
@@ -33,6 +33,7 @@
 					<g:submitButton name="create" class="save" value="${message(code: 'default.button.create.label', default: 'Create')}" />
 				</fieldset>
 			</g:form>
+
 		</div>
 	</body>
 </html>

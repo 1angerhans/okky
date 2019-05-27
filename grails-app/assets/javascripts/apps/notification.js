@@ -1,4 +1,6 @@
 $(function() {
+    
+    var title = document.title.replace(/^\([0-9]+\) /, '');
 
     var notificationText = {
         'NOTED' : '이 <strong>#{{article.id}}</strong> 에 댓글을 남겼습니다.',
@@ -15,8 +17,7 @@ $(function() {
             success : function(data) {
                 var notificationsHtml = '';
 
-                $('#notification-count').hide();
-                $('#user-func-icon').show();
+                toggleNotificationCount();
 
                 $(data.notifications).each(function(i, notification) {
                     var senders = '', date, text = Mustache.render(notificationText[notification.type], notification);
@@ -54,6 +55,7 @@ $(function() {
     $('#user-func').popover({
         container: 'body',
         title: '설정',
+        placement: whereToPlacePopover,
         template: $('#setting-template').html(),
         html: true
     });
@@ -61,6 +63,7 @@ $(function() {
     $('#user-notification').popover({
         container: 'body',
         title: '알림',
+        placement: whereToPlacePopover,
         template: $('#notification-template').html(),
         html: true
     });
@@ -75,17 +78,23 @@ $(function() {
             url: contextPath+'/notification/count.json',
             dataType: 'json',
             success: function(data) {
-                if(data.count > 0) {
-                    $('#user-notification-count').html(data.count).show();
-                    $('#user-notification-icon').hide();
-                } else {
-                    $('#user-notification-count').html(0).hide();
-                    $('#user-notification-icon').show();
-                }
+                toggleNotificationCount(data.count);
             },
             error: function() {
                 clearInterval(notificationInterval);
             }
         });
-    }, 1000 * 60 * 10)
+    }, 1000 * 60 * 30);
+    
+    var toggleNotificationCount = function(count) {
+        if(count) {
+            $('#user-notification-count').html(count).show();
+            $('#user-notification-icon').hide();
+            document.title = '('+count+') ' + title;
+        } else {
+            $('#user-notification-count').html(0).hide();
+            $('#user-notification-icon').show();
+            document.title = title;
+        }
+    };
 });

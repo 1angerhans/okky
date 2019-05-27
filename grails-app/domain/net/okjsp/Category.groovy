@@ -13,6 +13,7 @@ class Category implements Serializable {
     boolean writable = true
     boolean enabled = true
     boolean isURL = false
+    boolean adminOnly = false
     Integer level = 1
     Integer sortOrder = 0
 
@@ -20,6 +21,12 @@ class Category implements Serializable {
     boolean useEvaluate
     boolean useNote
     boolean useOpinion
+    boolean useSelectSolution = false
+    boolean requireTag = false
+    Boolean anonymity = false
+    
+    Boolean writeByExternalLink = false
+    String externalLink
 
     static belongsTo = [parent: Category]
 
@@ -37,12 +44,16 @@ class Category implements Serializable {
         useNote nullable: true
         useOpinion nullable: true
         iconCssNames nullable: true
+        anonymity nullable: true
+        writeByExternalLink nullable: true
+        externalLink nullable: true
+        adminOnly nullable: true
     }
 
     static mapping = {
         id generator: "assigned", name: 'code', type: 'string'
-        parent lazy: false
-        children sort: 'sortOrder'
+        children sort: 'sortOrder', cache: true
+        parent cache: true, lazy: false
         sort 'sortOrder'
         cache true
     }

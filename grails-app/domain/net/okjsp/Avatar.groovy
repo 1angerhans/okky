@@ -13,11 +13,13 @@ class Avatar implements Comparable {
     String picture
     AvatarPictureType pictureType = AvatarPictureType.GRAVATAR
     Integer activityPoint = 0
+    Boolean official = false
 
     static hasMany = [activities: Activity, tags : Tag]
 
     static mapping = {
         pictureType enumType: 'ordinal'
+        cache true
     }
 
     static constraints = {
@@ -27,6 +29,7 @@ class Avatar implements Comparable {
         }
         picture blank: false
         activityPoint bindable: false
+        official nullable: true, bindable: false
     }
 
     def setPictureBySns(User user, AvatarPictureType type = pictureType) {
@@ -37,15 +40,17 @@ class Avatar implements Comparable {
             case AvatarPictureType.FACEBOOK :
                 picture = user.oAuthIDs.find { it.provider == FacebookOAuthToken.PROVIDER_NAME}.accessToken
                 break
-            default:
+            case AvatarPictureType.GRAVATAR :
                 picture = user.person.email.encodeAsMD5()
+                break
+            default:
                 break
         }
     }
 
     static boolean disAllowNicknameFilter(nickname) {
         return ['OKJSP관리자','옥히','옥희','OKJSP','운영진','운영자'
-                ,'OKJSP운영진','OKJSP운영자','부운영자','옥히관리자','옥희관리자'].contains(nickname)
+                ,'OKJSP운영진','OKJSP운영자','부운영자','옥히관리자','옥희관리자', '관리자', 'OKKY 관리자', 'OKKY관리자', '오키관리자'].contains(nickname)
     }
 
     @Transactional
@@ -56,7 +61,6 @@ class Avatar implements Comparable {
     }
 
     int compareTo(Object other) {
-        println "${id} == ${other.id}"
         id <=> other.id
     }
 

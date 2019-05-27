@@ -17,7 +17,7 @@ grails.project.fork = [
     // configure settings for the run-app JVM
 //    run: [maxMemory: 768, minMemory: 64, debug: false, maxPerm: 256, forkReserve:false],
     test: false,
-    run: false,
+    run: [maxMemory: 768, minMemory: 64, debug: false, forkReserve:false],
     // configure settings for the run-war JVM
     war: [maxMemory: 768, minMemory: 64, debug: false, forkReserve:false],
     // configure settings for the Console UI JVM
@@ -48,6 +48,7 @@ grails.project.dependency.resolution = {
         //mavenRepo "http://download.java.net/maven/2/"
         //mavenRepo "http://repository.jboss.com/maven2/"
         mavenRepo "http://repo.grails.org/grails/core"
+        mavenRepo "http://repo.grails.org/grails/plugins"
 
         mavenRepo "https://raw.github.com/fernandezpablo85/scribe-java/mvn-repo"
         mavenRepo "http://repo.spring.io/milestone/"
@@ -59,17 +60,17 @@ grails.project.dependency.resolution = {
         // runtime 'org.postgresql:postgresql:9.3-1101-jdbc41'
 
         compile "org.springframework:spring-orm:$springVersion"
+        compile "com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20180219.1"
     }
 
     plugins {
         // plugins for the build system only
-        build ":tomcat:7.0.54"
+        build ":tomcat:7.0.70"
 
         // plugins for the compile step
         compile ":scaffolding:2.1.2"
-        compile ':cache:1.1.7'
-        compile ":asset-pipeline:1.9.0"
-        compile ":mysql-connectorj:5.1.22.1"
+        compile ':cache:1.1.8'
+        compile ":asset-pipeline:2.5.7"
         compile ":markdown:1.1.1"
         compile ":recaptcha:1.0.0"
         compile ":pretty-time:2.1.3.Final-1.0.1"
@@ -83,11 +84,17 @@ grails.project.dependency.resolution = {
         compile ":spring-security-oauth-facebook:0.2"
         compile ":spring-security-oauth-google:0.3.1"
 
+        compile "org.grails.plugins:spring-mobile:1.1.3"
+
+        compile ":random:0.2"
+
+        compile ":mail:1.0.7"
+
         // plugins needed at runtime but not for compilation
-        runtime ":hibernate4:4.3.5.4" // or ":hibernate:3.6.10.15"
+        runtime ":hibernate4:4.3.10" // or ":hibernate:3.6.10.15"
         runtime ":database-migration:1.4.0"
         runtime ":jquery:1.11.1"
-        runtime ':twitter-bootstrap:3.2.1' // current: 3.1.1.3
+        compile ":twitter-bootstrap:3.3.2.1"
 
         // Uncomment these to enable additional asset-pipeline capabilities
         //compile ":sass-asset-pipeline:1.7.4"
